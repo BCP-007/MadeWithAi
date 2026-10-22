@@ -125,6 +125,36 @@ class PiecePainter extends CustomPainter {
   bool shouldRepaint(PiecePainter o) => true;
 }
 
+/// Shows the next several pieces side by side.
+class NextPainter extends CustomPainter {
+  final List<int> types;
+  NextPainter(this.types);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final slot = size.width / types.length;
+    final cs = slot / 4.6;
+    for (var k = 0; k < types.length; k++) {
+      final cells = cellsOf(types[k], 0);
+      var minX = 9, maxX = 0, minY = 9, maxY = 0;
+      for (final c in cells) {
+        minX = min(minX, c[0]);
+        maxX = max(maxX, c[0]);
+        minY = min(minY, c[1]);
+        maxY = max(maxY, c[1]);
+      }
+      final ox = k * slot + (slot - (maxX - minX + 1) * cs) / 2 - minX * cs;
+      final oy = (size.height - (maxY - minY + 1) * cs) / 2 - minY * cs;
+      for (final c in cells) {
+        drawBlock(canvas, Rect.fromLTWH(ox + c[0] * cs, oy + c[1] * cs, cs, cs), pieceColors[types[k]]);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(NextPainter o) => true;
+}
+
 class CtrlButton extends StatefulWidget {
   final IconData icon;
   final Color color;
@@ -289,30 +319,20 @@ class _GamePageState extends State<GamePage> with WidgetsBindingObserver {
       'd': DateTime.now().millisecondsSinceEpoch,
       't': g.elapsedMs,
     });
-    showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (c) => PopScope(
-        canPop: false,
-        child: AlertDialog(
-          title: const Text('GAME OVER'),
-          content: Text('Score ${g.score}\nLevel ${g.level}  •  Lines ${g.lines}'),
-          actions: [
-            TextButton(
-                onPressed: () {
-                  Navigator.pop(c);
-                  Navigator.pop(context);
-                },
-                child: const Text('Home')),
-            FilledButton(
-                onPressed: () {
-                  Navigator.pop(c);
-                  _restart();
-                },
-                child: const Text('Play Again')),
-          ],
-        ),
-      ),
+    showNeonDialog<void>(
+      context,
+      title: 'GAME OVER',
+      message: 'Score ${g.score}\nLevel ${g.level}  •  Lines ${g.lines}',
+      buttons: (c) => [
+        NeonButton('PLAY AGAIN', const Color(0xFF39FF14), () {
+          Navigator.pop(c);
+          _restart();
+        }, width: double.infinity),
+        NeonButton('HOME', const Color(0xFFFF2040), () {
+          Navigator.pop(c);
+          Navigator.pop(context);
+        }, width: double.infinity),
+      ],
     );
   }
 
@@ -334,18 +354,16 @@ class _GamePageState extends State<GamePage> with WidgetsBindingObserver {
       return;
     }
     _pause();
-    final r = await showDialog<int>(
-      context: context,
-      barrierDismissible: false,
-      builder: (c) => AlertDialog(
-        title: const Text('Leave match?'),
-        content: const Text('The game is paused.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(c, 0), child: const Text('Resume Game')),
-          TextButton(onPressed: () => Navigator.pop(c, 2), child: const Text('Exit Without Saving')),
-          FilledButton(onPressed: () => Navigator.pop(c, 1), child: const Text('Save & Exit')),
-        ],
-      ),
+    final r = await showNeonDialog<int>(
+      context,
+      title: 'LEAVE MATCH?',
+      message: 'The game is paused.',
+      buttons: (c) => [
+        NeonButton('SAVE & EXIT', const Color(0xFF39FF14), () => Navigator.pop(c, 1), width: double.infinity),
+        NeonButton('RESUME GAME', const Color(0xFF00F0FF), () => Navigator.pop(c, 0), width: double.infinity),
+        NeonButton('EXIT WITHOUT SAVING', const Color(0xFFFF2040), () => Navigator.pop(c, 2),
+            width: double.infinity),
+      ],
     );
     if (!mounted) return;
     if (r == 1) {
@@ -401,7 +419,20 @@ class _GamePageState extends State<GamePage> with WidgetsBindingObserver {
                   style: TextStyle(color: p.sub, fontSize: 12, letterSpacing: 1)),
             ]),
           ),
-          _box('NEXT', g.queue.first, p),
+          Column(mainAxisSize: MainAxisSize.min, children: [
+            Text('NEXT', style: TextStyle(color: p.sub, fontSize: 10, letterSpacing: 2)),
+            const SizedBox(height: 2),
+            Container(
+              width: 120,
+              height: 56,
+              decoration: BoxDecoration(
+                color: p.panel.withAlpha(190),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: p.accent.withAlpha(110)),
+              ),
+              child: CustomPaint(painter: NextPainter(g.queue.take(3).toList())),
+            ),
+          ]),
           IconButton(
               onPressed: _pause,
               icon: Icon(Icons.pause_circle_outline, color: p.accent, size: 30)),

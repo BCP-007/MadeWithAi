@@ -15,6 +15,14 @@ String _date(int ms) {
   return '${d.year}-${_two(d.month)}-${_two(d.day)} ${_two(d.hour)}:${_two(d.minute)}';
 }
 
+Widget _aboutRow(String k, String v, Pal p) => Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        SizedBox(width: 110, child: Text(k, style: TextStyle(color: p.sub))),
+        Expanded(child: Text(v, style: TextStyle(color: p.text))),
+      ]),
+    );
+
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
   @override
@@ -32,17 +40,15 @@ class _HomePageState extends State<HomePage> {
       await _play(false);
       return;
     }
-    final r = await showDialog<int>(
-      context: context,
-      builder: (c) => AlertDialog(
-        title: const Text('Unfinished game found'),
-        content: const Text('Resume your saved match, or discard it and start a new one?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(c, 0), child: const Text('Cancel')),
-          TextButton(onPressed: () => Navigator.pop(c, 2), child: const Text('Discard & New')),
-          FilledButton(onPressed: () => Navigator.pop(c, 1), child: const Text('Resume')),
-        ],
-      ),
+    final r = await showNeonDialog<int>(
+      context,
+      title: 'UNFINISHED GAME',
+      message: 'Resume your saved match, or discard it and start a new one?',
+      buttons: (c) => [
+        NeonButton('RESUME', const Color(0xFF39FF14), () => Navigator.pop(c, 1), width: double.infinity),
+        NeonButton('DISCARD & NEW', const Color(0xFFFF2040), () => Navigator.pop(c, 2), width: double.infinity),
+        NeonButton('CANCEL', const Color(0xFF00F0FF), () => Navigator.pop(c, 0), width: double.infinity),
+      ],
     );
     if (r == 1) {
       await _play(true);
@@ -78,6 +84,31 @@ class _HomePageState extends State<HomePage> {
                 NeonButton('SETTINGS', const Color(0xFFFF8A00), () {
                   Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsPage()));
                 }),
+                const SizedBox(height: 40),
+                Text('Made With AI',
+                    style: TextStyle(
+                        color: pieceColors[0],
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 6,
+                        shadows: [
+                          Shadow(
+                              color:
+                                  pieceColors[0].withAlpha(p.dark ? 200 : 90),
+                              blurRadius: 10)
+                        ]
+                        )
+                      ),
+                Text('BY BCP',
+                    style: TextStyle(
+                        color: pieceColors[0],
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 6,
+                        shadows: [
+                          Shadow(color: pieceColors[0].withAlpha(p.dark ? 200 : 90), blurRadius: 10)
+                        ])
+                        ),
               ]),
             ),
           ),
@@ -213,6 +244,25 @@ class SettingsPage extends StatelessWidget {
                   onChanged: (x) => Store.dark.value = x,
                 ),
               ),
+            ]),
+          ),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: p.panel.withAlpha(210),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: p.accent.withAlpha(80)),
+            ),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('ABOUT',
+                  style: TextStyle(color: p.accent, fontWeight: FontWeight.w800, letterSpacing: 3)),
+              const SizedBox(height: 10),
+              _aboutRow('App', 'Neon Tetris v1.0.0', p),
+              _aboutRow('Made by', 'BCP', p),
+              _aboutRow('Built with', 'Flutter & Dart', p),
+              _aboutRow('AI model', 'Claude Sonnet 5.5 (Anthropic)', p),
+              // _aboutRow('Tokens used', 'your number here', p),
             ]),
           ),
         ]),

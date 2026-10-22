@@ -95,7 +95,8 @@ class NeonButton extends StatelessWidget {
   final String label;
   final Color color;
   final VoidCallback onTap;
-  const NeonButton(this.label, this.color, this.onTap, {super.key});
+  final double width;
+  const NeonButton(this.label, this.color, this.onTap, {super.key, this.width = 260});
 
   @override
   Widget build(BuildContext context) {
@@ -106,7 +107,7 @@ class NeonButton extends StatelessWidget {
         onTap();
       },
       child: Container(
-        width: 260,
+        width: width,
         height: 54,
         alignment: Alignment.center,
         decoration: BoxDecoration(
@@ -143,4 +144,51 @@ class NeonTitle extends StatelessWidget {
       ],
     );
   }
+}
+
+/// App-themed popup (same look as the pause screen).
+Future<T?> showNeonDialog<T>(BuildContext context,
+    {required String title,
+    String? message,
+    required List<Widget> Function(BuildContext) buttons}) {
+  return showDialog<T>(
+    context: context,
+    barrierDismissible: false,
+    builder: (c) {
+      final p = Pal.of(c);
+      return PopScope(
+        canPop: false,
+        child: Dialog(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
+          child: Container(
+            padding: const EdgeInsets.all(22),
+            decoration: BoxDecoration(
+              color: p.panel,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: p.accent, width: 2),
+              boxShadow: [BoxShadow(color: p.accent.withAlpha(p.dark ? 110 : 60), blurRadius: 24)],
+            ),
+            child: SingleChildScrollView(
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                Text(title,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                        color: p.text, fontSize: 22, fontWeight: FontWeight.w900, letterSpacing: 3)),
+                if (message != null) ...[
+                  const SizedBox(height: 10),
+                  Text(message,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: p.sub, fontSize: 15, height: 1.4)),
+                ],
+                const SizedBox(height: 20),
+                for (final b in buttons(c)) ...[b, const SizedBox(height: 12)],
+              ]),
+            ),
+          ),
+        ),
+      );
+    },
+  );
 }
