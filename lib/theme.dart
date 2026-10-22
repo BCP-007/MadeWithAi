@@ -128,13 +128,13 @@ class NeonTitle extends StatelessWidget {
   const NeonTitle({super.key});
   @override
   Widget build(BuildContext context) {
-    const idx = [4, 6, 1, 3, 0, 5];
+    const idx = [4, 6, 1, 3, 0, 5,6,1,3,0,5,4,3,6];
     final dark = Pal.of(context).dark;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        for (var i = 0; i < 6; i++)
-          Text('TETRIS'[i],
+        for (var i = 0; i < 13; i++)
+          Text('Classic Games'[i],
               style: TextStyle(
                 fontSize: 52,
                 fontWeight: FontWeight.w900,

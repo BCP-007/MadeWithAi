@@ -15,35 +15,50 @@ class Store {
     dark.addListener(() => _p.setBool('dark', dark.value));
   }
 
+  // Tetris keeps the original save key so existing unfinished matches continue working.
   static bool get hasSave => _p.containsKey('save');
 
-  static Future<void> save(Map<String, dynamic> j) async {
-    await _p.setString('save', jsonEncode(j));
+  static Future<void> save(Map<String, dynamic> json) async {
+    await _p.setString('save', jsonEncode(json));
   }
 
   static Map<String, dynamic>? load() {
-    final s = _p.getString('save');
-    if (s == null) return null;
+    final value = _p.getString('save');
+    if (value == null) return null;
     try {
-      return jsonDecode(s) as Map<String, dynamic>;
+      return jsonDecode(value) as Map<String, dynamic>;
     } catch (_) {
       return null;
     }
   }
 
-  static Future<void> clearSave() async {
-    await _p.remove('save');
+  static Future<void> clearSave() async => _p.remove('save');
+
+  static String _scoresKey(String game) =>
+      game == 'TETRIS' ? 'scores' : 'scores_$game';
+
+  static List<Map<String, dynamic>> scores([String game = 'TETRIS']) {
+    final values =
+        List<String>.from(_p.getStringList(_scoresKey(game)) ?? <String>[]);
+    final result = <Map<String, dynamic>>[];
+    for (final value in values) {
+      try {
+        final item = Map<String, dynamic>.from(jsonDecode(value) as Map);
+        item['g'] ??= 'TETRIS';
+        result.add(item);
+      } catch (_) {
+        // Ignore one damaged score instead of breaking the leaderboard.
+      }
+    }
+    return result;
   }
 
-  // Score record keys: s=score v=level n=lines d=date(ms) t=duration(ms)
-  static List<Map<String, dynamic>> scores() {
-    final l = List<String>.from(_p.getStringList('scores') ?? <String>[]);
-    return [for (final s in l) jsonDecode(s) as Map<String, dynamic>];
-  }
-
-  static Future<void> addScore(Map<String, dynamic> m) async {
-    final l = List<String>.from(_p.getStringList('scores') ?? <String>[]);
-    l.add(jsonEncode(m));
-    await _p.setStringList('scores', l);
+  static Future<void> addScore(Map<String, dynamic> score) async {
+    final game = (score['g'] as String? ?? 'TETRIS').toUpperCase();
+    final values =
+        List<String>.from(_p.getStringList(_scoresKey(game)) ?? <String>[]);
+    final copy = Map<String, dynamic>.from(score)..['g'] = game;
+    values.add(jsonEncode(copy));
+    await _p.setStringList(_scoresKey(game), values);
   }
 }
