@@ -15,6 +15,7 @@ class Store {
     dark.addListener(() => _p.setBool('dark', dark.value));
   }
 
+  // Tetris save (only Tetris has save/resume)
   static bool get hasSave => _p.containsKey('save');
 
   static Future<void> save(Map<String, dynamic> j) async {
@@ -35,15 +36,27 @@ class Store {
     await _p.remove('save');
   }
 
-  // Score record keys: s=score v=level n=lines d=date(ms) t=duration(ms)
-  static List<Map<String, dynamic>> scores() {
-    final l = List<String>.from(_p.getStringList('scores') ?? <String>[]);
+  // Score record keys: s=score v=level n=lines/dots/kills d=date(ms) t=duration(ms)
+  static String _sk(String g) => g == 'tetris' ? 'scores' : 'scores_$g';
+
+  static List<Map<String, dynamic>> scores([String g = 'tetris']) {
+    final l = List<String>.from(_p.getStringList(_sk(g)) ?? <String>[]);
     return [for (final s in l) jsonDecode(s) as Map<String, dynamic>];
   }
 
-  static Future<void> addScore(Map<String, dynamic> m) async {
-    final l = List<String>.from(_p.getStringList('scores') ?? <String>[]);
+  static Future<void> addScore(Map<String, dynamic> m,
+      [String g = 'tetris']) async {
+    final l = List<String>.from(_p.getStringList(_sk(g)) ?? <String>[]);
     l.add(jsonEncode(m));
-    await _p.setStringList('scores', l);
+    await _p.setStringList(_sk(g), l);
+  }
+
+  static int best([String g = 'tetris']) {
+    var b = 0;
+    for (final e in scores(g)) {
+      final s = e['s'] as int;
+      if (s > b) b = s;
+    }
+    return b;
   }
 }

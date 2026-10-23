@@ -21,7 +21,7 @@ class App extends StatelessWidget {
       valueListenable: Store.dark,
       builder: (_, dark, __) => MaterialApp(
         debugShowCheckedModeBanner: false,
-        title: 'Neon Tetris',
+        title: 'Classic Arcade',
         themeMode: dark ? ThemeMode.dark : ThemeMode.light,
         theme: ThemeData(
             useMaterial3: true,

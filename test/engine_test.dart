@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:neon_tetris/engine.dart';
+import 'package:classic_arcade/engine.dart';
 
 void main() {
   test('every piece has 4 cells in every rotation', () {
