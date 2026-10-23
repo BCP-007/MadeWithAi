@@ -126,6 +126,10 @@ class _HomePageState extends State<HomePage> {
       body: Backdrop(
         child: SafeArea(
           child: Column(children: [
+            const Padding(padding:EdgeInsets.fromLTRB(16, 14, 16, 2),
+            child:NeonTitle(text: 'CLASSIC GAMES', size: 58),
+            ),
+            const SizedBox(height: 10),
             GameTabs(
               items: games,
               selected: g.id,
