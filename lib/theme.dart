@@ -124,24 +124,33 @@ class NeonButton extends StatelessWidget {
   }
 }
 
+/// Rainbow neon title. Works with any text (default: TETRIS).
 class NeonTitle extends StatelessWidget {
-  const NeonTitle({super.key});
+  final String text;
+  const NeonTitle({super.key, this.text = 'TETRIS'});
   @override
   Widget build(BuildContext context) {
     const idx = [4, 6, 1, 3, 0, 5];
     final dark = Pal.of(context).dark;
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        for (var i = 0; i < 6; i++)
-          Text('TETRIS'[i],
-              style: TextStyle(
-                fontSize: 52,
-                fontWeight: FontWeight.w900,
-                color: pieceColors[idx[i]],
-                shadows: [Shadow(color: pieceColors[idx[i]].withAlpha(dark ? 230 : 120), blurRadius: dark ? 20 : 6)],
-              )),
-      ],
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (var i = 0; i < text.length; i++)
+            Text(text[i],
+                style: TextStyle(
+                  fontSize: 52,
+                  fontWeight: FontWeight.w900,
+                  color: pieceColors[idx[i % 6]],
+                  shadows: [
+                    Shadow(
+                        color: pieceColors[idx[i % 6]].withAlpha(dark ? 230 : 120),
+                        blurRadius: dark ? 20 : 6)
+                  ],
+                )),
+        ],
+      ),
     );
   }
 }

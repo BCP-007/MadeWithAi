@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
-import 'game_page.dart';
+import 'games.dart';
+import 'sound.dart';
 import 'store.dart';
 import 'theme.dart';
 
@@ -23,6 +24,56 @@ Widget _aboutRow(String k, String v, Pal p) => Padding(
       ]),
     );
 
+/// Row of game buttons shown at the top of the home page.
+class GameTabs extends StatelessWidget {
+  final List<GameDef> items;
+  final String selected;
+  final ValueChanged<GameDef> onSelect;
+  const GameTabs({super.key, required this.items, required this.selected, required this.onSelect});
+
+  @override
+  Widget build(BuildContext context) {
+    final p = Pal.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+      child: Row(children: [
+        for (final g in items)
+          Expanded(
+            child: GestureDetector(
+              onTap: () {
+                if (g.id != selected) Snd.play('click');
+                onSelect(g);
+              },
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                margin: const EdgeInsets.symmetric(horizontal: 4),
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                decoration: BoxDecoration(
+                  color: g.color.withAlpha(g.id == selected ? 70 : 20),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: g.color.withAlpha(g.id == selected ? 255 : 90), width: 2),
+                  boxShadow: g.id == selected
+                      ? [BoxShadow(color: g.color.withAlpha(p.dark ? 130 : 80), blurRadius: 14)]
+                      : [],
+                ),
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  Icon(g.icon, color: g.id == selected ? g.color : p.sub, size: 24),
+                  const SizedBox(height: 4),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(g.name,
+                        style: TextStyle(
+                            color: p.text, fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 1.2)),
+                  ),
+                ]),
+              ),
+            ),
+          ),
+      ]),
+    );
+  }
+}
+
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
   @override
@@ -30,13 +81,15 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  GameDef _g = gameById(Store.lastGame);
+
   Future<void> _play(bool resume) async {
-    await Navigator.push(context, MaterialPageRoute(builder: (_) => GamePage(resume: resume)));
+    await Navigator.push(context, MaterialPageRoute(builder: (_) => _g.builder(resume)));
     if (mounted) setState(() {});
   }
 
   Future<void> _start() async {
-    if (!Store.hasSave) {
+    if (!Store.hasSave(_g.id)) {
       await _play(false);
       return;
     }
@@ -53,7 +106,7 @@ class _HomePageState extends State<HomePage> {
     if (r == 1) {
       await _play(true);
     } else if (r == 2) {
-      await Store.clearSave();
+      await Store.clearSave(_g.id);
       if (mounted) await _play(false);
     }
   }
@@ -61,57 +114,62 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     final p = Pal.of(context);
+    final g = _g;
+    final credit = TextStyle(
+      color: pieceColors[0],
+      fontSize: 13,
+      fontWeight: FontWeight.w800,
+      letterSpacing: 6,
+      shadows: [Shadow(color: pieceColors[0].withAlpha(p.dark ? 200 : 90), blurRadius: 10)],
+    );
     return Scaffold(
       body: Backdrop(
         child: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              child: Column(mainAxisSize: MainAxisSize.min, children: [
-                const NeonTitle(),
-                const SizedBox(height: 6),
-                Text('SCI-FI ARCADE', style: TextStyle(color: p.sub, letterSpacing: 6, fontSize: 12)),
-                const SizedBox(height: 44),
-                if (Store.hasSave) ...[
-                  NeonButton('CONTINUE GAME', const Color(0xFF39FF14), () => _play(true)),
-                  const SizedBox(height: 16),
-                ],
-                NeonButton('START GAME', const Color(0xFF00F0FF), _start),
-                const SizedBox(height: 16),
-                NeonButton('SCORES', const Color(0xFFB400FF), () {
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const ScoresPage()));
-                }),
-                const SizedBox(height: 16),
-                NeonButton('SETTINGS', const Color(0xFFFF8A00), () {
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsPage()));
-                }),
-                const SizedBox(height: 40),
-                Text('Made With AI',
-                    style: TextStyle(
-                        color: pieceColors[0],
-                        fontSize: 13,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 6,
-                        shadows: [
-                          Shadow(
-                              color:
-                                  pieceColors[0].withAlpha(p.dark ? 200 : 90),
-                              blurRadius: 10)
-                        ]
-                        )
-                      ),
-                Text('BY BCP',
-                    style: TextStyle(
-                        color: pieceColors[0],
-                        fontSize: 13,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 6,
-                        shadows: [
-                          Shadow(color: pieceColors[0].withAlpha(p.dark ? 200 : 90), blurRadius: 10)
-                        ])
-                        ),
-              ]),
+          child: Column(children: [
+            GameTabs(
+              items: games,
+              selected: g.id,
+              onSelect: (x) {
+                Store.setLastGame(x.id);
+                setState(() => _g = x);
+              },
             ),
-          ),
+            Expanded(
+              child: Center(
+                child: SingleChildScrollView(
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 250),
+                    child: Column(
+                      key: ValueKey(g.id),
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        NeonTitle(text: g.name),
+                        const SizedBox(height: 6),
+                        Text(g.tagline, style: TextStyle(color: p.sub, letterSpacing: 6, fontSize: 12)),
+                        const SizedBox(height: 44),
+                        if (Store.hasSave(g.id)) ...[
+                          NeonButton('CONTINUE GAME', const Color(0xFF39FF14), () => _play(true)),
+                          const SizedBox(height: 16),
+                        ],
+                        NeonButton('START GAME', g.color, _start),
+                        const SizedBox(height: 16),
+                        NeonButton('SCORES', const Color(0xFFB400FF), () {
+                          Navigator.push(context, MaterialPageRoute(builder: (_) => ScoresPage(game: g)));
+                        }),
+                        const SizedBox(height: 16),
+                        NeonButton('SETTINGS', const Color(0xFFFF8A00), () {
+                          Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsPage()));
+                        }),
+                        const SizedBox(height: 40),
+                        Text('Made With AI', style: credit),
+                        Text('BY BCP', style: credit),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ]),
         ),
       ),
     );
@@ -119,7 +177,8 @@ class _HomePageState extends State<HomePage> {
 }
 
 class ScoresPage extends StatefulWidget {
-  const ScoresPage({super.key});
+  final GameDef game;
+  const ScoresPage({super.key, required this.game});
   @override
   State<ScoresPage> createState() => _ScoresPageState();
 }
@@ -130,7 +189,8 @@ class _ScoresPageState extends State<ScoresPage> {
   @override
   Widget build(BuildContext context) {
     final p = Pal.of(context);
-    final list = Store.scores();
+    final game = widget.game;
+    final list = Store.scores(game.id);
     if (byScore) {
       list.sort((a, b) => (b['s'] as int).compareTo(a['s'] as int));
     } else {
@@ -138,13 +198,13 @@ class _ScoresPageState extends State<ScoresPage> {
     }
     final best = list.isEmpty ? 0 : list.map((e) => e['s'] as int).reduce(max);
     return Scaffold(
-      appBar: AppBar(title: const Text('SCORES'), centerTitle: true),
+      appBar: AppBar(title: Text('${game.name} SCORES'), centerTitle: true),
       body: Backdrop(
         animate: false,
         child: list.isEmpty
             ? Center(
                 child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  Icon(Icons.sports_esports, size: 72, color: p.sub),
+                  Icon(game.icon, size: 72, color: game.color),
                   const SizedBox(height: 12),
                   Text('No matches yet', style: TextStyle(color: p.text, fontSize: 20, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 4),
@@ -183,7 +243,7 @@ class _ScoresPageState extends State<ScoresPage> {
                           color: p.panel.withAlpha(210),
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(
-                              color: top ? Colors.amber : p.accent.withAlpha(60), width: top ? 2 : 1),
+                              color: top ? Colors.amber : game.color.withAlpha(90), width: top ? 2 : 1),
                           boxShadow: top ? [BoxShadow(color: Colors.amber.withAlpha(90), blurRadius: 14)] : [],
                         ),
                         child: Row(children: [
@@ -191,7 +251,7 @@ class _ScoresPageState extends State<ScoresPage> {
                             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                               Text('${e['s']}',
                                   style: TextStyle(color: p.text, fontSize: 26, fontWeight: FontWeight.w900)),
-                              Text('Level ${e['v']}  •  ${e['n']} lines  •  ${_dur(e['t'] as int)}',
+                              Text('Level ${e['v']}  •  ${e['n']} ${game.unit}  •  ${_dur(e['t'] as int)}',
                                   style: TextStyle(color: p.text)),
                               Text(_date(e['d'] as int), style: TextStyle(color: p.sub, fontSize: 12)),
                             ]),
@@ -258,11 +318,11 @@ class SettingsPage extends StatelessWidget {
               Text('ABOUT',
                   style: TextStyle(color: p.accent, fontWeight: FontWeight.w800, letterSpacing: 3)),
               const SizedBox(height: 10),
-              _aboutRow('App', 'Neon Tetris v1.0.0', p),
+              _aboutRow('App', 'Neon Arcade v2.0.0', p),
+              _aboutRow('Games', 'Tetris • Pac-Man • Invaders', p),
               _aboutRow('Made by', 'BCP', p),
               _aboutRow('Built with', 'Flutter & Dart', p),
               _aboutRow('AI model', 'Claude Sonnet 5.5 (Anthropic)', p),
-              // _aboutRow('Tokens used', 'your number here', p),
             ]),
           ),
         ]),
