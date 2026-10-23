@@ -1,4 +1,4 @@
-package com.example.tetris_game
+package com.bcp.classic_arcade
 
 import io.flutter.embedding.android.FlutterActivity
 
